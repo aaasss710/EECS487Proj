@@ -1,39 +1,33 @@
-
-
 import torch
-from transformers import RobertaModel
+from transformers import RobertaTokenizer, RobertaModel
 
-class CustomEncoder(torch.nn.Module):
-    def __init__(self, encoder):
-        super().__init__()
-        self.encoder = encoder
+class CustomRobertaModel(RobertaModel):
+    def __init__(self, model_name='roberta-base', adapter_name=None):
+        super().__init__(RobertaModel.from_pretrained(model_name).config)
+        
+        # Load the pre-trained Roberta model
+        self.roberta = RobertaModel.from_pretrained(model_name)
+        
+        if adapter_name is not None:
+            # Load the adapter
+            self.adapter_name = self.roberta.load_adapter(adapter_name, source="hf")
+        else:
+            self.adapter_name = None
 
-    def forward(self, input_ids, attention_mask):
-        # Custom logic here
-        encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        # More custom logic here
-        return encoder_output
+    def forward(self, text):
+        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        
+        # Tokenize the input text
+        input_tokens = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
+        
+        if self.adapter_name is not None:
+            # Set the active adapter
+            self.roberta.active_adapters = self.adapter_name
+        
+        # Perform the forward pass
+        outputs = self.roberta(**input_tokens)
+        
+        # Get the logits from the output
+        cls = outputs[0][:,0,:]
 
-class CustomPooler(torch.nn.Module):
-    def __init__(self, pooler):
-        super().__init__()
-        self.pooler = pooler
-
-    def forward(self, encoder_output):
-        # Custom logic here
-        pooler_output = self.pooler(encoder_output)
-        # More custom logic here
-        return pooler_output
-
-class CustomRobertaModel(torch.nn.Module):
-    def __init__(self, roberta):
-        super().__init__()
-        self.roberta = roberta
-        self.embeddings = roberta.embeddings
-        self.encoder = CustomEncoder(roberta.encoder)
-        self.pooler = CustomPooler(roberta.pooler)
-
-    def forward(self, input_ids, attention_mask):
-        encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        pooler_output = self.pooler(encoder_output)
-        return pooler_output
+        return cls
