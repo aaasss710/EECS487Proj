@@ -1,6 +1,6 @@
 import torch
 from transformers import RobertaTokenizer, RobertaModel
-
+from losses import *
 class CustomRobertaModel(RobertaModel):
     def __init__(self, model_name='roberta-base', adapter_name=None):
         super().__init__(RobertaModel.from_pretrained(model_name).config)
@@ -26,8 +26,10 @@ class CustomRobertaModel(RobertaModel):
         
         # Perform the forward pass
         outputs = self.roberta(**input_tokens)
-        
-        # Get the logits from the output
-        cls = outputs[0][:,0,:]
-
-        return cls
+        if self.training:
+            output_dict = {}
+            
+        else:
+            # Get the logits from the output
+            cls = outputs[0][:,0,:]
+            return cls
