@@ -26,10 +26,10 @@ class CustomRobertaModel(RobertaModel):
         
         # Perform the forward pass
         outputs = self.roberta(**input_tokens)
-        if self.training:
-            output_dict = {}
+        # if self.training:
+        #     output_dict = {}
             
-        else:
-            # Get the logits from the output
-            cls = outputs[0][:,0,:]
-            return cls
+        # else:
+        # Get the logits from the output
+        cls = outputs[0][:,0,:]
+        return cls
