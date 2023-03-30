@@ -15,7 +15,7 @@ from transformers.file_utils import (
     replace_return_docstrings,
 )
 from transformers.modeling_outputs import SequenceClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
-
+from losses import *
 class MLPLayer(nn.Module):
     """
     Head for getting sentence representations over RoBERTa/BERT's CLS representation.
@@ -93,7 +93,8 @@ def cl_init(cls, config):
         cls.mlp = MLPLayer(config)
     cls.sim = Similarity(temp=cls.model_args.temp)
     cls.init_weights()
-
+def weighted_loss(x,y):
+    return align_loss(x,y)+(uniform_loss(x)+uniform_loss(y))/2
 def cl_forward(cls,
     encoder,
     input_ids=None,
@@ -191,14 +192,14 @@ def cl_forward(cls,
         z1 = torch.cat(z1_list, 0)
         z2 = torch.cat(z2_list, 0)
 
-    cos_sim = cls.sim(z1.unsqueeze(1), z2.unsqueeze(0))
+    #cos_sim = cls.sim(z1.unsqueeze(1), z2.unsqueeze(0))
     # Hard negative
     if num_sent >= 3:
         z1_z3_cos = cls.sim(z1.unsqueeze(1), z3.unsqueeze(0))
         cos_sim = torch.cat([cos_sim, z1_z3_cos], 1)
 
     labels = torch.arange(cos_sim.size(0)).long().to(cls.device)
-    loss_fct = nn.CrossEntropyLoss()
+    loss_fct = weighted_loss#nn.CrossEntropyLoss()
 
     # Calculate loss with hard negatives
     if num_sent == 3:
@@ -209,7 +210,7 @@ def cl_forward(cls,
         ).to(cls.device)
         cos_sim = cos_sim + weights
 
-    loss = loss_fct(cos_sim, labels)
+    loss = loss_fct(z1,z2) #loss_fct(cos_sim, labels)
 
     # Calculate loss for MLM
     if mlm_outputs is not None and mlm_labels is not None:
