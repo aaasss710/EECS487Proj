@@ -16,6 +16,11 @@ class CustomRobertaModel(RobertaModel):
             self.adapter_name = self.roberta.load_adapter(adapter_name, source="hf")
         else:
             self.adapter_name = None
+        if adapter_name is not None:
+            # Load the adapter
+            for name, param in self.roberta.named_parameters():
+                if f"adapters.{adapter_name}" not in name:
+                    param.requires_grad = False
         self.roberta_m = copy.deepcopy(self.roberta)
         self.m = 0.999
     @torch.no_grad()
