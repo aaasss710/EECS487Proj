@@ -13,7 +13,23 @@ class CustomRobertaModel(RobertaModel):
             self.adapter_name = self.roberta.load_adapter(adapter_name, source="hf")
         else:
             self.adapter_name = None
+        if adapter_name is not None:
+            # Load the adapter
+            for name, param in self.roberta.named_parameters():
+                if f"adapters.{adapter_name}" not in name:
+                    param.requires_grad = False
+                
+            
+        #     # Freeze the base model parameters
+        #     for param in self.roberta.parameters():
+        #         param.requires_grad = False
 
+        #     # Unfreeze the adapter parameters
+        #     for adapter_name, adapter in self.roberta.config.adapters.adapters.items():
+        #         # for param in adapter.parameters():
+        #             adapter.requires_grad = True
+        # else:
+        #     self.adapter_name = None
     def forward(self, text):
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         
