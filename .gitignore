@@ -6,3 +6,4 @@ fairseq
 apex
 experiment.ipynb
 __pycache__
+data

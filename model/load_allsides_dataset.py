@@ -18,7 +18,7 @@ class allsidesData(Dataset):
 
 
 def main():
-    with open('./data/allsides.jsonl', 'r') as fp:
+    with open('../data/allsides.jsonl', 'r') as fp:
         input = json.loads(fp.read())
 
     BATCH_SIZE = 64

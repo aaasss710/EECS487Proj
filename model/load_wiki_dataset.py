@@ -16,7 +16,7 @@ class wikiData(Dataset):
 
 
 def main():
-    with open('./data/wiki1m_for_simcse.txt', 'r', encoding='UTF-8') as f:
+    with open('../data/wiki1m_for_simcse.txt', 'r', encoding='UTF-8') as f:
         input_text = f.readlines()
 
     # MAX_LEN = 256  # RoBerta model accept 512 at most.
