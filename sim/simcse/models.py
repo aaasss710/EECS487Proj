@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
-
+import copy
 import transformers
 from transformers import RobertaTokenizer
 from transformers.models.roberta.modeling_roberta import RobertaPreTrainedModel, RobertaModel, RobertaLMHead
@@ -96,7 +96,7 @@ def cl_init(cls, config):
 def weighted_loss(x,y):
     return align_loss(x,y)+(uniform_loss(x)+uniform_loss(y))/2
 def cl_forward(cls,
-    encoder,
+    encoder,encoder_m,
     input_ids=None,
     attention_mask=None,
     token_type_ids=None,
@@ -136,7 +136,17 @@ def cl_forward(cls,
         output_hidden_states=True if cls.model_args.pooler_type in ['avg_top2', 'avg_first_last'] else False,
         return_dict=True,
     )
-
+    outputs_m =  encoder_m(
+        input_ids,
+        attention_mask=attention_mask,
+        token_type_ids=token_type_ids,
+        position_ids=position_ids,
+        head_mask=head_mask,
+        inputs_embeds=inputs_embeds,
+        output_attentions=output_attentions,
+        output_hidden_states=True if cls.model_args.pooler_type in ['avg_top2', 'avg_first_last'] else False,
+        return_dict=True,
+    )
     # MLM auxiliary objective
     if mlm_input_ids is not None:
         mlm_input_ids = mlm_input_ids.view((-1, mlm_input_ids.size(-1)))
@@ -155,14 +165,15 @@ def cl_forward(cls,
     # Pooling
     pooler_output = cls.pooler(attention_mask, outputs)
     pooler_output = pooler_output.view((batch_size, num_sent, pooler_output.size(-1))) # (bs, num_sent, hidden)
-
+    pooler_output_m = cls.pooler(attention_mask, outputs_m)
+    pooler_output_m  = pooler_output.view((batch_size, num_sent, pooler_output_m.size(-1)))
     # If using "cls", we add an extra MLP layer
     # (same as BERT's original implementation) over the representation.
     if cls.pooler_type == "cls":
         pooler_output = cls.mlp(pooler_output)
-
+        pooler_output_m = cls.mlp(pooler_output_m)
     # Separate representation
-    z1, z2 = pooler_output[:,0], pooler_output[:,1]
+    z1, z2 = pooler_output[:,0], pooler_output_m[:,1]
 
     # Hard negative
     if num_sent == 3:
@@ -344,7 +355,17 @@ class RobertaForCL(RobertaPreTrainedModel):
             self.lm_head = RobertaLMHead(config)
 
         cl_init(self, config)
-
+        self.roberta_m = copy.deepcopy(self.roberta)
+        self.m = 0.999#momentum 
+    @torch.no_grad()
+    def momentum_update(self):
+        """
+        Momentum update of the key encoder
+        """
+        for param_q, param_k in zip(
+            self.roberta.parameters(), self.roberta_m.parameters()
+        ):
+            param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
     def forward(self,
         input_ids=None,
         attention_mask=None,
@@ -361,7 +382,7 @@ class RobertaForCL(RobertaPreTrainedModel):
         mlm_labels=None,
     ):
         if sent_emb:
-            return sentemb_forward(self, self.roberta,
+            return sentemb_forward(self, self.roberta,self.roberta_m,
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
@@ -374,6 +395,8 @@ class RobertaForCL(RobertaPreTrainedModel):
                 return_dict=return_dict,
             )
         else:
+            if self.training:
+                self.momentum_update()
             return cl_forward(self, self.roberta,
                 input_ids=input_ids,
                 attention_mask=attention_mask,

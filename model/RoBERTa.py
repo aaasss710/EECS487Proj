@@ -1,6 +1,6 @@
 import torch
 from transformers import RobertaTokenizer, RobertaModel
-from losses import *
+
 class CustomRobertaModel(RobertaModel):
     def __init__(self, model_name='roberta-base', adapter_name=None):
         super().__init__(RobertaModel.from_pretrained(model_name).config)
