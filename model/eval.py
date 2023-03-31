@@ -37,8 +37,7 @@ def evaluate(model, tokenizer, device):
     se = senteval.engine.SE(params, batcher, prepare)
     
     
-    tasks = ['STSBenchmark', 'SICKRelatedness', 'MR',
-                'CR', 'SUBJ', 'MPQA', 'SST2', 'TREC', 'MRPC']
+    tasks = ['STSBenchmark', 'SICKRelatedness']
     model.eval()
     results = se.eval(tasks)
 
@@ -47,13 +46,6 @@ def evaluate(model, tokenizer, device):
 
     metrics = {"eval_stsb_spearman": stsb_spearman, "eval_sickr_spearman": sickr_spearman,
                 "eval_avg_sts": (stsb_spearman + sickr_spearman) / 2}
-
-    avg_transfer = 0
-    for task in ['MR', 'CR', 'SUBJ', 'MPQA', 'SST2', 'TREC', 'MRPC']:
-        avg_transfer += results[task]['devacc']
-        metrics['eval_{}'.format(task)] = results[task]['devacc']
-    avg_transfer /= 7
-    metrics['eval_avg_transfer'] = avg_transfer
 
     return metrics
 
