@@ -71,7 +71,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--data_path', type=str, default='../data/wiki1m_for_simcse.txt', help='Path to the dataset')
     return parser.parse_args()
@@ -81,7 +81,9 @@ def train_model(args):
     with open(args.data_path, 'r', encoding='UTF-8') as f:
         input_text = f.readlines()
 
-    wiki = wikiData(input_text)
+    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')  # ADD THIS LINE
+
+    wiki = wikiData(input_text, tokenizer)  # PASS tokenizer TO wikiData
     train_params = {'batch_size': args.batch_size, 'shuffle': True, 'num_workers': 0}
     trainloader = DataLoader(wiki, **train_params)
 
@@ -91,7 +93,6 @@ def train_model(args):
 
     # Set up the optimizer
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
-    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     # Training loop
     # for epoch in range(args.epochs):
     #     epoch_loss = 0
@@ -115,14 +116,14 @@ def train_model(args):
                 optimizer.step()
                 epoch_loss += loss.item()
 
-            print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(trainloader)}")
+    print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(trainloader)}")
     return model
 
 def main():
     args = parse_arguments()
     trained_model = train_model(args)
     # Save the trained model if needed
-    trained_model.save_pretrained('./trained_model')
+    trained_model.save_pretrained('./trained_model_wiki')
 
 if __name__ == "__main__":
     main()

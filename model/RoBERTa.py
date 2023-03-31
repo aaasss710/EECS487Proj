@@ -12,7 +12,7 @@ class CustomRobertaModel(RobertaModel):
         
         # Load the pre-trained Roberta model
         self.roberta = RobertaModel.from_pretrained(model_name)
-        self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        # self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         if adapter_name is not None:
             # Load the adapter
             self.adapter_name = self.roberta.load_adapter(adapter_name, source="hf")
@@ -55,10 +55,10 @@ class CustomRobertaModel(RobertaModel):
     #         # Get the logits from the output
     #         cls = outputs[0][:,0,:]
     #         return cls
-    def forward(self, text):
+    def forward(self, input_tokens):
 
         # Tokenize the input text
-        input_tokens =  self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
+        # input_tokens =  self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
 
         # Move input tokens to the device (GPU)
         input_tokens = {k: v.to(device) for k, v in input_tokens.items()}
