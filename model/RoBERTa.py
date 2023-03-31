@@ -1,28 +1,27 @@
 import torch
-from transformers import RobertaTokenizer, RobertaModel
+from transformers import RobertaModelWithHeads
+
 from losses import *
 import copy
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def weighted_loss(x,y):
     return align_loss(x,y)+(uniform_loss(x)+uniform_loss(y))/2
-class CustomRobertaModel(RobertaModel):
-    def __init__(self, model_name='roberta-base', adapter_name=None):
-        super().__init__(RobertaModel.from_pretrained(model_name).config)
+class CustomRobertaModel(RobertaModelWithHeads):
+    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None):
+        super().__init__(config=RobertaModelWithHeads.from_pretrained(model_name).config)
         
         # Load the pre-trained Roberta model
-        self.roberta = RobertaModel.from_pretrained(model_name)
-        # self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        if adapter_name is not None:
-            # Load the adapter
-            self.adapter_name = self.roberta.load_adapter(adapter_name, source="hf")
+        self.roberta = RobertaModelWithHeads.from_pretrained(model_name)
+        if not adapter_type:
+            adapter_name = "my_adapter"
+            self.roberta.add_adapter(adapter_name)
         else:
-            self.adapter_name = None
-        if adapter_name is not None:
-            # Load the adapter
-            for name, param in self.roberta.named_parameters():
-                if f"adapters.{adapter_name}" not in name:
-                    param.requires_grad = False
+            self.roberta.add_adapter(adapter_name, adapter_type)
+        # num_labels = 2
+        # self.roberta.add_classification_head(adapter_name, num_labels=num_labels)
+        self.roberta.train_adapter([adapter_name])
+
         self.roberta_m = copy.deepcopy(self.roberta)
         self.m = 0.999
     @torch.no_grad()
@@ -61,22 +60,21 @@ class CustomRobertaModel(RobertaModel):
         # input_tokens =  self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
 
         # Move input tokens to the device (GPU)
-        input_tokens = {k: v.to(device) for k, v in input_tokens.items()}
 
-        if self.adapter_name is not None:
-            # Set the active adapter
-            self.roberta.active_adapters = self.adapter_name
+        # if self.adapter_name is not None:
+        #     # Set the active adapter
+        #     self.roberta.active_adapters = self.adapter_name
 
         # Perform the forward pass
-        outputs = self.roberta(**input_tokens)
+        outputs = self.roberta(**input_tokens)[0]
         if self.training:
             self.momentum_update()
-            outputs_m = self.roberta_m(**input_tokens)
-            loss = weighted_loss(outputs[0][:, 0, :], outputs_m[0][:, 0, :])
-            return loss, outputs[0][:, 0, :]
+            outputs_m = self.roberta_m(**input_tokens)[0]
+            loss = weighted_loss(outputs[:, 0, :], outputs_m[:, 0, :])
+            return loss, outputs[:, 0, :]
         else:
             # Get the logits from the output
-            cls = outputs[0][:, 0, :]
+            cls = outputs[:, 0, :]
             return cls
 
     
