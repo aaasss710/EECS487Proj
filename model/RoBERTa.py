@@ -69,10 +69,10 @@ class CustomRobertaModel(RobertaModelWithHeads):
         outputs = self.roberta(**input_tokens)[0]
         if self.training:
             self.momentum_update()
-            outputs_m = self.roberta_m(**input_tokens)
-            B = outputs[0].shape[0]
-            loss = weighted_loss(outputs[0].reshape(B,-1), outputs_m[0].reshape(B,-1))
-            return loss, outputs[0][:, 0, :]
+            outputs_m = self.roberta_m(**input_tokens)[0]
+            B = outputs.shape[0]
+            loss = weighted_loss(outputs.reshape(B,-1), outputs_m.reshape(B,-1))
+            return loss, outputs[:, 0, :]
         else:
             # Get the logits from the output
             cls = outputs[:, 0, :]
