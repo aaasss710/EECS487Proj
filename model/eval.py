@@ -25,8 +25,8 @@ def evaluate(model, tokenizer, device):
         for k in batch:
             batch[k] = batch[k].to(device)
         with torch.no_grad():
-            outputs = model(**batch, output_hidden_states=True, return_dict=True, sent_emb=True)
-            pooler_output = outputs.pooler_output
+            outputs = model(batch)
+            pooler_output = outputs
         return pooler_output.cpu()
     
     # Set params for SentEval (fastmode)
@@ -37,23 +37,25 @@ def evaluate(model, tokenizer, device):
     se = senteval.engine.SE(params, batcher, prepare)
     
     
-    tasks = ['STSBenchmark', 'SICKRelatedness']
+    tasks = ['SICKRelatedness']
     model.eval()
     results = se.eval(tasks)
 
-    stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
+    # stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
     sickr_spearman = results['SICKRelatedness']['dev']['spearman'][0]
 
-    metrics = {"eval_stsb_spearman": stsb_spearman, "eval_sickr_spearman": sickr_spearman,
-                "eval_avg_sts": (stsb_spearman + sickr_spearman) / 2}
+    metrics = {"eval_sickr_spearman": sickr_spearman,
+                }
 
     return metrics
 
 
 def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     model = CustomRobertaModel()
-    evaluate(model, tokenizer, 'cuda')
+    metrics = evaluate(model, tokenizer, device)
+    print(metrics)
 
 if __name__ == "__main__":
     main()
