@@ -7,3 +7,6 @@ apex
 experiment.ipynb
 __pycache__
 data
+model/trained_model_wiki
+model/~
+model/__pycache__

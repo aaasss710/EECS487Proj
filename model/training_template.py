@@ -55,6 +55,7 @@
 # if __name__ == "__main__":
 #     main()
 
+
 import torch
 import argparse
 from torch.optim import AdamW
@@ -70,7 +71,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--data_path', type=str, default='../data/wiki1m_for_simcse.txt', help='Path to the dataset')
@@ -86,9 +87,10 @@ def train_model(args):
     wiki = wikiData(input_text, tokenizer)  # PASS tokenizer TO wikiData
     train_params = {'batch_size': args.batch_size, 'shuffle': True, 'num_workers': 0}
     trainloader = DataLoader(wiki, **train_params)
-
+    
     # Initialize model
-    model = CustomRobertaModel().to(device)
+    model = CustomRobertaModel(adapter_name="AdapterHub/bert-base-uncased-pf-imdb")
+    model.to(device)
     model.train()
 
     # Set up the optimizer
@@ -112,7 +114,7 @@ def train_model(args):
             epoch_loss = 0
             for batch in tqdm(trainloader, desc=f"Epoch {epoch + 1}/{args.epochs}"):
                 optimizer.zero_grad()
-                # Remove the tokenization from the training loop
+                batch = {k: v.to(device) for k, v in batch.items()}  # move batch to device
                 loss, _ = model(batch)
                 loss.backward()
                 optimizer.step()
