@@ -4,8 +4,11 @@ from transformers import RobertaModelWithHeads
 from losses import *
 import copy
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+def L2Norm(x):
+    return x / x.norm(p=2, dim=1, keepdim=True)
 def weighted_loss(x,y):
+    x = L2Norm(x)
+    y = L2Norm(y)
     return align_loss(x,y)+(uniform_loss(x)+uniform_loss(y))/2
 class CustomRobertaModel(RobertaModelWithHeads):
     def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None):
@@ -21,9 +24,9 @@ class CustomRobertaModel(RobertaModelWithHeads):
         # num_labels = 2
         # self.roberta.add_classification_head(adapter_name, num_labels=num_labels)
         self.roberta.train_adapter([adapter_name])
-        """
+        
         self.roberta_m = copy.deepcopy(self.roberta)
-        self.m = 0.999"""
+        self.m = 0.999
     @torch.no_grad()
     def momentum_update(self):
         """
@@ -68,9 +71,8 @@ class CustomRobertaModel(RobertaModelWithHeads):
         # Perform the forward pass
         outputs = self.roberta(**input_tokens)[0]
         if self.training:
-            #self.momentum_update()
-            #outputs_m = self.roberta_m(**input_tokens)[0]
-            outputs_m = self.roberta(**input_tokens)[0]
+            self.momentum_update()
+            outputs_m = self.roberta_m(**input_tokens)[0]
             B = outputs.shape[0]
             loss = weighted_loss(outputs.reshape(B,-1), outputs_m.reshape(B,-1))
             return loss, outputs[:, 0, :]
