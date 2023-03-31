@@ -106,6 +106,8 @@ def train_model(args):
     #         epoch_loss += loss.item()
 
     #     print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(trainloader)}")
+    freq = 20
+    i=0
     for epoch in range(args.epochs):
             epoch_loss = 0
             for batch in tqdm(trainloader, desc=f"Epoch {epoch + 1}/{args.epochs}"):
@@ -115,7 +117,9 @@ def train_model(args):
                 loss.backward()
                 optimizer.step()
                 epoch_loss += loss.item()
-
+                if i%20==0:
+                    print("iter {}, training loss {}".format(i,loss.item()))
+                i+=1
     print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(trainloader)}")
     return model
 
