@@ -36,16 +36,16 @@ def evaluate(model, tokenizer, device):
 
     se = senteval.engine.SE(params, batcher, prepare)
     
-    
-    tasks = ['SICKRelatedness']
+    tasks = ['STSBenchmark', 'SICKRelatedness']
     model.eval()
     results = se.eval(tasks)
 
-    # stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
+    stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
     sickr_spearman = results['SICKRelatedness']['dev']['spearman'][0]
 
-    metrics = {"eval_sickr_spearman": sickr_spearman,
-                }
+    metrics = {"eval_stsb_spearman": stsb_spearman, "eval_sickr_spearman": sickr_spearman,
+               "eval_avg_sts": (stsb_spearman + sickr_spearman) / 2}
+
 
     return metrics
 
@@ -53,8 +53,9 @@ def evaluate(model, tokenizer, device):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-    model = CustomRobertaModel()
-    metrics = evaluate(model, tokenizer, device)
+    wiki_model = CustomRobertaModel()
+    wiki_model.load_state_dict(torch.load('1wiki.pth', map_location=device))
+    metrics = evaluate(wiki_model, tokenizer, device)
     print(metrics)
 
 if __name__ == "__main__":
