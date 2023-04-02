@@ -10,3 +10,4 @@ data
 model/trained_model_wiki
 model/~
 model/__pycache__
+model/*.pth
