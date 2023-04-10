@@ -93,8 +93,8 @@ class CustomRobertaModel(RobertaModelWithHeads):
         if self.training:
             if self.sim:
                 b,s,h = outputs.shape
-                outputs = self.roberta_m(**input_tokens)[0]
-                cos_sim = self.cossim(outputs.unsqueeze(1), outputs.unsqueeze(0))
+                outputsm = self.roberta_m(**input_tokens)[0]
+                cos_sim = self.cossim(outputs[:,0].unsqueeze(1), outputsm[:,0].unsqueeze(0))
                 labels = torch.arange(cos_sim.size(0)).long().to(outputs.device)
                 loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(cos_sim, labels)
