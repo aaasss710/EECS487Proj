@@ -12,3 +12,7 @@ model/~
 model/__pycache__
 model/allsides_wiki_model
 model/*.pth
+model/simcse_1wiki_model
+model/simcse_2wiki_model
+model/simcse_3wiki_model
+model/__pycache__

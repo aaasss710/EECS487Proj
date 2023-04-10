@@ -25,7 +25,7 @@ class Similarity(nn.Module):
         return self.cos(x, y) / self.temp
 
 class CustomRobertaModel(RobertaModelWithHeads):
-    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=False):
+    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=True):
         super().__init__(config=RobertaModelWithHeads.from_pretrained(model_name).config)
         
         # Load the pre-trained Roberta model
@@ -45,6 +45,7 @@ class CustomRobertaModel(RobertaModelWithHeads):
             self.roberta_m = copy.deepcopy(self.roberta)
             self.m = 0.999
         else:
+            self.roberta_m = copy.deepcopy(self.roberta)
             self.cossim=Similarity(0.001)
     @torch.no_grad()
     def momentum_update(self):
