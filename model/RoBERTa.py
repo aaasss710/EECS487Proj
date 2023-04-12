@@ -43,7 +43,9 @@ class CustomRobertaModel(RobertaModelWithHeads):
             self.roberta.train_adapter([adapter_name])
         if not sim:
             self.roberta_m = copy.deepcopy(self.roberta)
-            self.m = 0.999
+            for param in self.roberta_m.parameters():
+                param.requires_grad = False
+            self.m = 0.99
         else:
             self.cossim=Similarity(0.05)
     @torch.no_grad()
