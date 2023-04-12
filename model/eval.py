@@ -36,7 +36,7 @@ def evaluate(model, tokenizer, device):
 
     se = senteval.engine.SE(params, batcher, prepare)
     
-    tasks = ['STSBenchmark', 'SICKRelatedness', 'STS12']
+    tasks = ['STSBenchmark', 'STS12', 'STS13', 'STS14', 'STS15', 'STS16']
     model.eval()
     results = se.eval(tasks)
     
@@ -46,7 +46,6 @@ def evaluate(model, tokenizer, device):
     sts15_spearman = results['STS15']['all']['spearman']['all']
     sts16_spearman = results['STS16']['all']['spearman']['all']
     stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
-    sickr_spearman = results['SICKRelatedness']['dev']['spearman'][0]
 
     metrics = {"eval_stsb_spearman": stsb_spearman,
                'STS12': sts12_spearman,
