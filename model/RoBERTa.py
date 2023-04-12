@@ -25,13 +25,13 @@ class Similarity(nn.Module):
         return self.cos(x, y) / self.temp
 
 class CustomRobertaModel(RobertaModelWithHeads):
-    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=True):
+    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=True, use_adapter=True):
         super().__init__(config=RobertaModelWithHeads.from_pretrained(model_name).config)
         
         # Load the pre-trained Roberta model
         self.roberta = RobertaModelWithHeads.from_pretrained(model_name)
         self.sim=sim
-        if not sim:
+        if use_adapter:
             if not adapter_type:
                 adapter_name = "my_adapter"
                 self.roberta.add_adapter(adapter_name)
@@ -41,12 +41,11 @@ class CustomRobertaModel(RobertaModelWithHeads):
             # self.roberta.add_classification_head(adapter_name, num_labels=num_labels)
 
             self.roberta.train_adapter([adapter_name])
-            
+        if not sim:
             self.roberta_m = copy.deepcopy(self.roberta)
             self.m = 0.999
         else:
-            self.roberta_m = copy.deepcopy(self.roberta)
-            self.cossim=Similarity(0.001)
+            self.cossim=Similarity(0.05)
     @torch.no_grad()
     def momentum_update(self):
         """
@@ -92,8 +91,7 @@ class CustomRobertaModel(RobertaModelWithHeads):
         outputs = self.roberta(**input_tokens)[0]
         if self.training:
             if self.sim:
-                b,s,h = outputs.shape
-                outputsm = self.roberta_m(**input_tokens)[0]
+                outputsm = self.roberta(**input_tokens)[0]
                 cos_sim = self.cossim(outputs[:,0].unsqueeze(1), outputsm[:,0].unsqueeze(0))
                 labels = torch.arange(cos_sim.size(0)).long().to(outputs.device)
                 loss_fct = nn.CrossEntropyLoss()
