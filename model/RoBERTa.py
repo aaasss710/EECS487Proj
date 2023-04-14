@@ -25,12 +25,13 @@ class Similarity(nn.Module):
         return self.cos(x, y) / self.temp
 
 class CustomRobertaModel(RobertaModelWithHeads):
-    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=True, use_adapter=True):
+    def __init__(self, model_name='roberta-base', adapter_name=None, adapter_type =None,sim=True, use_adapter=True,momentum=True):
         super().__init__(config=RobertaModelWithHeads.from_pretrained(model_name).config)
         
         # Load the pre-trained Roberta model
         self.roberta = RobertaModelWithHeads.from_pretrained(model_name)
         self.sim=sim
+        self.momentum = momentum
         if use_adapter:
             if not adapter_type:
                 adapter_name = "my_adapter"
@@ -41,13 +42,12 @@ class CustomRobertaModel(RobertaModelWithHeads):
             # self.roberta.add_classification_head(adapter_name, num_labels=num_labels)
 
             self.roberta.train_adapter([adapter_name])
-        if not sim:
-            self.roberta_m = copy.deepcopy(self.roberta)
-            for param in self.roberta_m.parameters():
-                param.requires_grad = False
-            self.m = 0.99
-        else:
-            self.cossim=Similarity(0.05)
+        self.roberta_m = copy.deepcopy(self.roberta)
+        for param in self.roberta_m.parameters():
+            param.requires_grad = False
+        self.m = 0.99
+        
+        self.cossim=Similarity(0.05)
     @torch.no_grad()
     def momentum_update(self):
         """
@@ -92,17 +92,22 @@ class CustomRobertaModel(RobertaModelWithHeads):
         # Perform the forward pass
         outputs = self.roberta(**input_tokens)[0]
         if self.training:
-            if self.sim:
+            if self.momentum:
+                self.momentum_update()
+                outputsm = self.roberta_m(**input_tokens)[0]
+            else:
+
                 outputsm = self.roberta(**input_tokens)[0]
+            if self.sim:
+                
                 cos_sim = self.cossim(outputs[:,0].unsqueeze(1), outputsm[:,0].unsqueeze(0))
                 labels = torch.arange(cos_sim.size(0)).long().to(outputs.device)
                 loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(cos_sim, labels)
                 return loss,outputs[:, 0, :]
-            self.momentum_update()
-            outputs_m = self.roberta_m(**input_tokens)[0]
             
-            loss = weighted_loss(outputs[:, 0, :], outputs_m[:, 0, :])
+            
+            loss = weighted_loss(outputs[:, 0, :], outputsm[:, 0, :])
             return loss, outputs[:, 0, :]
         else:
             # Get the logits from the output
