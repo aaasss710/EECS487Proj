@@ -36,7 +36,8 @@ def evaluate(model, tokenizer, device):
 
     se = senteval.engine.SE(params, batcher, prepare)
     
-    tasks = ['STSBenchmark', 'STS12', 'STS13', 'STS14', 'STS15', 'STS16']
+    tasks = ['STSBenchmark', 'STS12', 'STS13', 'STS14',
+             'STS15', 'STS16', 'SICKRelatedness']
     model.eval()
     results = se.eval(tasks)
     
@@ -46,14 +47,17 @@ def evaluate(model, tokenizer, device):
     sts15_spearman = results['STS15']['all']['spearman']['all']
     sts16_spearman = results['STS16']['all']['spearman']['all']
     stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
-
-    metrics = {"eval_stsb_spearman": stsb_spearman,
+    sickr_spearman = results['SICKRelatedness']['dev']['spearman'][0]
+    
+    metrics = {
                'STS12': sts12_spearman,
                'STS13': sts13_spearman,
                'STS14': sts14_spearman,
                'STS15': sts15_spearman,
                'STS16': sts16_spearman,
-               "eval_avg_sts": (stsb_spearman + sts12_spearman + sts13_spearman + sts14_spearman + sts15_spearman + sts16_spearman) / 6
+               "eval_stsb_spearman": stsb_spearman,
+               "sickr_spearman": sickr_spearman,
+               "eval_avg_sts": (stsb_spearman + sts12_spearman + sts13_spearman + sts14_spearman + sts15_spearman + sts16_spearman + sickr_spearman) / 7
             }
 
 
@@ -63,8 +67,9 @@ def evaluate(model, tokenizer, device):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-    wiki_model = CustomRobertaModel()
-    wiki_model.load_state_dict(torch.load('real_simcse_1wiki_model.pth', map_location=device))
+    wiki_model = CustomRobertaModel(sim=True).to(device)
+    wiki_model.load_state_dict(torch.load(
+        'my_model.pth', map_location=device))
     metrics = evaluate(wiki_model, tokenizer, device)
     print(metrics)
 
