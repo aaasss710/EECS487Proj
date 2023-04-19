@@ -3,9 +3,12 @@ from transformers import RobertaModelWithHeads
 import torch.nn as nn
 from losses import *
 import copy
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def L2Norm(x):
     return x / x.norm(p=2, dim=1, keepdim=True)
+
 def weighted_loss(x,y):
     x = L2Norm(x)
     y = L2Norm(y)
@@ -57,39 +60,9 @@ class CustomRobertaModel(RobertaModelWithHeads):
             self.roberta.parameters(), self.roberta_m.parameters()
         ):
             param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
-    # def forward(self, text):
-    #     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        
-    #     # Tokenize the input text
-    #     input_tokens = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
-        
-    #     if self.adapter_name is not None:
-    #         # Set the active adapter
-    #         self.roberta.active_adapters = self.adapter_name
-        
-    #     # Perform the forward pass
-    #     outputs = self.roberta(**input_tokens)
-    #     if self.training:
-    #         self.momentum_update()
-    #         outputs_m = self.roberta_m(**input_tokens)
-    #         loss = weighted_loss(outputs[0],outputs_m[0])
-    #         return loss,outputs[0][:,0,:]
-    #     else:
-    #         # Get the logits from the output
-    #         cls = outputs[0][:,0,:]
-    #         return cls
+            
     def forward(self, input_tokens):
 
-        # Tokenize the input text
-        # input_tokens =  self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256)
-
-        # Move input tokens to the device (GPU)
-
-        # if self.adapter_name is not None:
-        #     # Set the active adapter
-        #     self.roberta.active_adapters = self.adapter_name
-
-        # Perform the forward pass
         outputs = self.roberta(**input_tokens)[0]
         if self.training:
             if self.momentum:
