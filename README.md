@@ -21,7 +21,7 @@ Run eval_downstream.py
 
 # Training
 ## Unsupervised training on wiki dataset
-Run RoBERTa.ipynb
+Run model/RoBERTa.ipynb
 
 ## Finetuning with AllSides dataset
 Run eval_downstream.py
